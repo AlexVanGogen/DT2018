@@ -6,12 +6,17 @@
   | nil => ys
   | cons x xs => cons x (xs ++ ys)
 
-\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) => {?}
+\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs
+    | nil => idp
+    | cons x xs => pmap (cons x) (++-assoc xs ys zs)
 
 -- 2. На прошлой лекции мы определяли функцию T : Bool -> \Type рекурсивно.
 --    Определите аналогичную функцию индуктивно.
 
-\data T
+\data T (b : Bool) \with
+    | true => Unit
+
+\func absurd' {A : \Type} (p : T false): A
 
 -- 3. Напишите функцию lookup, которая принимает список и натуральное число и возвращает элемент по заданому индексу.
 --    В общем случае эту функцию определить невозможно, т.к. индекс может быть больше, чем число элементов в списке.
@@ -23,55 +28,229 @@
   | suc x, 0 => false
   | suc x, suc y => x < y
 
-\func lookup => {?}
+\func length {A : \Type} (xs : List A) : Nat \elim xs
+    | nil => 0
+    | cons x xs => suc (length xs)
+
+\func lookup {A : \Type} (xs : List A) (n : Nat) (p : T (n < length xs)) : A \elim xs, n
+    | nil, 0 => absurd' p
+    | nil, suc n => absurd' p
+    | cons x _, 0 => x
+    | cons x xs, suc n => lookup xs n p
+
+\func test-lookup1 : lookup (cons 1 (cons 2 (cons 3 nil))) 0 Unit = 1 => idp
+\func test-lookup2 : lookup (cons 1 (cons 2 (cons 3 nil))) 1 Unit = 2 => idp
+\func test-lookup3 : lookup (cons 1 (cons 2 (cons 3 nil))) 2 Unit = 3 => idp
 
 -- 4. Реализуйте аналоги функции replicate для vec и Vec (эта функция создает список заданной длины, состоящий из повторений данного элемента).
 
+\func replicate-vec {A : \Type} (a : A) (n : Nat) : vec A n \elim n
+    | 0 => ()
+    | suc n => (a, replicate-vec a n)
+
+\func test-replicate-vec-1 : replicate-vec 0 5 = (0, (0, (0, (0, (0, ()))))) => idp
+\func test-replicate-vec-2 : replicate-vec (cons 1 nil) 2 = (cons 1 nil, (cons 1 nil, ())) => idp
+
+\func replicate-Vec {A : \Type} (a : A) (n : Nat) : Vec A n \elim n
+    | 0 => fnil
+    | suc n => fcons a (replicate-Vec a n)
+
+\func test-replicate-Vec-1 : replicate-Vec 0 5 = fcons 0 (fcons 0 (fcons 0 (fcons 0 (fcons 0 fnil)))) => idp
+\func test-replicate-Vec-2 : replicate-Vec (cons 1 nil) 2 = fcons (cons 1 nil) (fcons (cons 1 nil) fnil) => idp
+
 -- 5. Реализуйте аналоги функции map для vec и Vec.
+
+\func map-vec {A B : \Type} {n : Nat} (f : A -> B) (xs : vec A n) : vec B n \elim n, xs
+    | 0, () => ()
+    | suc n, (x, xs) => (f x, map-vec f xs)
+
+\func test-map-vec-1 : map-vec {Nat} {Nat} {3} suc (1, (2, (0, ()))) = (2, (3, (1, ()))) => idp
+
+\func map-Vec {A B : \Type} {n : Nat} (f : A -> B) (xs : Vec A n) : Vec B n \elim n, xs
+    | 0, fnil => fnil
+    | suc n, fcons x xs => fcons (f x) (map-Vec f xs)
+
+\func test-map-Vec-1 : map-Vec suc (fcons 1 (fcons 2 (fcons 0 fnil))) = fcons 2 (fcons 3 (fcons 1 fnil)) => idp
+\func test-map-Vec-2 : map-Vec {Nat} (\lam _ => 0) fnil = map-Vec {Nat} (\lam _ => 1) fnil => idp
 
 -- 6. Реализуйте аналоги функции zipWith для vec и Vec.
 --    Функция должна принимать вектора одинаковой длины.
 
+\func zip-vec {A B C : \Type} {n : Nat} (f : A -> B -> C) (xs : vec A n) (ys : vec B n) : vec C n \elim n, xs, ys
+    | 0, (), () => ()
+    | suc n, (x, xs), (y, ys) => (f x y, zip-vec f xs ys)
+
+\func test-zip-vec-1 : zip-vec {Nat} {Bool} {\Sigma Nat Bool} {2} (\lam a b => (a, b)) (1, (2, ())) (true, (false, ())) = ((1, true), ((2, false), ())) => idp
+
+\func zip-Vec {A B C : \Type} {n : Nat} (f : A -> B -> C) (xs : Vec A n) (ys : Vec B n) : Vec C n \elim n, xs, ys
+    | 0, fnil, fnil => fnil
+    | suc n, fcons x xs, fcons y ys => fcons (f x y) (zip-Vec f xs ys)
+
+\func test-zip-Vec-1 : zip-Vec (\lam a b => (a, b)) (fcons 1 (fcons 2 fnil)) (fcons true (fcons false fnil)) = fcons (1, true) (fcons (2, false) fnil) => idp
+
 -- 7. Реализуйте Fin как рекурсивную функцию.
+
+\data FNat (A : \Type) | Zero | Succ A
+\data Empty
+
+\func fin (n : Nat) : \Type
+    | 0 => Empty
+    | suc n => FNat (fin n)
+
+\func absurd-f {A : \Type} (x : fin 0) : A
+
+\func fin0 : fin 3 => Zero
+\func fin1 : fin 3 => Succ Zero
+\func fin2 : fin 3 => Succ (Succ Zero)
+--\func fin3 : fin 3 => Succ (Succ (Succ Zero))
 
 -- 8. Функции Fin n → A соответствуют спискам элементов A длины n.
 --    Функция, преобразующая Vec A n в Fin n → A, была реализована на лекции.
 --    Реализуйте обратную функцию.
 
-\func coin {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n => {?}
+\func coin {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n \elim n
+    | 0 => fnil
+    | suc n => fcons (f fzero) (coin (\lam fin-n => f (fsuc fin-n)))
+
+\func fff3 (i : Fin 3) : Nat \elim i
+    | fzero => 42
+    | fsuc fzero => 36
+    | fsuc (fsuc fzero) => 81
+    | fsuc (fsuc (fsuc _)) => 0
+
+\func test-coin : coin {Nat} {3} fff3 = fcons 42 (fcons 36 (fcons 81 fnil)) => idp
 
 -- 9. Определите тип матриц и ряд функций над ними.
 
-\func Mat (A : \Type) (n m : Nat) : \Type => {?}
+-- Matrix n x m
+\func Mat (A : \Type) (n m : Nat) : \Type => Vec (Vec A m) n
+
+{-
+    Supplementary functions for the further usage
+-}
+
+{-
+    row z e n i = [z, z, ..., z, e, z, ..., z,  z]
+                   0  1      i-1 i i+1     n-2 n-1
+-}
+\func row {A : \Type} (z e : A) (n i : Nat) : Vec A n \elim n, i
+    | suc n, 0 => fcons e (replicate-Vec z n)
+    | suc n, suc i => fcons z (row z e n i)
+    | 0, i => fnil
+
+\func test-row1 : row 0 1 3 0 = fcons 1 (fcons 0 (fcons 0 fnil)) => idp
+\func test-row2 : row 5 1 3 1 = fcons 5 (fcons 1 (fcons 5 fnil)) => idp
+\func test-row3 : row 1 0 3 2 = fcons 1 (fcons 1 (fcons 0 fnil)) => idp
+
+\func minus (a b : Nat) : Nat
+    | 0, _ => 0
+    | a, 0 => a
+    | suc a, suc b => minus a b
 
 -- диагональная матрица с элементами e на диагонали и z на остальных позициях.
 
-\func diag {A : \Type} (z e : A) (n : Nat) : Mat A n n => {?}
+\func diag {A : \Type} (z e : A) (n : Nat) : Mat A n n => diag' {A} z e n n
+    \where \func diag' {A : \Type} (z e : A) (!n n : Nat) : Mat A n !n \elim n
+                 | 0 => fnil
+                 | suc n => fcons (row z e !n (minus !n (suc n))) (diag' z e !n n)
+
+\func diag-ex : Mat Nat 3 3 => fcons (fcons 1 (fcons 0 (fcons 0 fnil)))
+                              (fcons (fcons 0 (fcons 1 (fcons 0 fnil)))
+                              (fcons (fcons 0 (fcons 0 (fcons 1 fnil)))
+                               fnil))
+
+\func test-diag : diag {Nat} 0 1 3 = diag-ex => idp
 
 -- транспонирование матриц
 
-\func transpose {A : \Type} {n m : Nat} (M : Mat A n m) : Mat A m n => {?}
+{-
+                           /       C1^T      \
+    (C1, C2, ..., Cm)^T = |                   |
+                           \ (C2, ..., Cm)^T /
+-}
+\func transpose {A : \Type} {n m : Nat} (M : Mat A n m) : Mat A m n \elim n, m
+    | 0, m => replicate-Vec fnil m
+    | _, 0 => fnil
+    | suc n, suc m => fcons (map-Vec Head M) (transpose (map-Vec Tail M))
+
+\func A' : Mat Nat 3 2 => fcons (fcons 1 (fcons 2 fnil))
+                          (fcons (fcons 3 (fcons 4 fnil))
+                          (fcons (fcons 5 (fcons 6 fnil))
+                           fnil))
+
+\func A'T : Mat Nat 2 3 => fcons (fcons 1 (fcons 3 (fcons 5 fnil)))
+                           (fcons (fcons 2 (fcons 4 (fcons 6 fnil)))
+                            fnil)
+
+\func doubleA' : Mat Nat 3 2 => fcons (fcons 2 (fcons 4 fnil))
+                               (fcons (fcons 6 (fcons 8 fnil))
+                               (fcons (fcons 10 (fcons 12 fnil))
+                                fnil))
+
+\func test-transpose1 : transpose A' = A'T => idp
+\func test-transpose2 : transpose A'T = A' => idp
 
 -- сложение матриц
 
-\func matAdd {A : \Type} (add : A -> A -> A) (n m : Nat) (M N : Mat A n m) : Mat A n m => {?}
+\func matAdd {A : \Type} (add : A -> A -> A) (n m : Nat) (M N : Mat A n m) : Mat A n m => zip-Vec (zip-Vec add) M N
+
+\func test-matAdd : matAdd (Nat.+) 3 2 A' (transpose A'T) = doubleA' => idp
 
 -- умножение матриц
 
 -- z ─ нейтральный элемент по сложению.
-\func matMul {A : \Type} (z : A) (add mul : A -> A -> A) (n m k : Nat) (M : Mat A n m) (N : Mat A m k) : Mat A n k => {?}
+\func scalar-mult {A : \Type} (z : A) (add mul : A -> A -> A) (m : Nat) (v1 v2 : Vec A m) : A \elim m, v1, v2
+    | 0, _, _ => z
+    | suc m, fcons v v1, fcons v' v2 => add (mul v v') (scalar-mult z add mul m v1 v2)
+
+\func vec-mult-mat {A : \Type} (z : A) (add mul : A -> A -> A) (m k : Nat) (v : Vec A m) (N : Mat A k m) : Vec A k
+      => map-Vec (scalar-mult z add mul m v) N
+
+\func matMul {A : \Type} (z : A) (add mul : A -> A -> A) (n m k : Nat) (M : Mat A n m) (N : Mat A m k) : Mat A n k
+      => map-Vec (\lam Mr => vec-mult-mat z add mul m k Mr (transpose N)) M
+
+\func A'T*A : Mat Nat 2 2 => fcons (fcons 35 (fcons 44 fnil))
+                            (fcons (fcons 44 (fcons 56 fnil))
+                             fnil)
+
+\func test-matMul : matMul 0 (Nat.+) (Nat.*) 2 3 2 A'T A' = A'T*A => idp
 
 -- 10. Определите тип CTree A n бинарных деревьев высоты ровно n, которые хранят элементы только во внутренних узлах, но не в листьях.
 --     Высота листа равна 0.
 --     Любое такое бинарное дерево будет полным.
 
-\data CTree (A : \Type) (n : Nat)
+\data CTree (A : \Type) (n : Nat) \elim n
+    | 0 => CLeaf
+    | suc n => CNode A (CTree A n) (CTree A n)
+
+\func ctree1 : CTree Nat 2 => CNode 1 (CNode 2 CLeaf CLeaf) (CNode 3 CLeaf CLeaf)
+--\func ctree-incorrect : CTree Nat 2 => CNode 1 CLeaf (CNode 2 CLeaf CLeaf) -- incomplete tree
 
 -- 11. Определите тип Tree A n бинарных деревьев высоты не больше n, которые хранят элементы только во внутренних узлах, но не в листьях.
 --     Высота листа равна 0.
 
-\data Tree (A : \Type) (n : Nat)
+\data Tree (A : \Type) (n : Nat) \elim n
+    | suc n => { | !Leaf | Node A (Tree A n) (Tree A n) }
+    | _ => Leaf
+
+\func tree1 : Tree Nat 2 => Node 1 (Node 2 Leaf Leaf) (Node 3 Leaf Leaf)
+\func tree2 : Tree Nat 2 => Node 1 !Leaf !Leaf
+\func tree3 : Tree Nat 2 => Node 1 (Node 2 Leaf Leaf) !Leaf
 
 -- определите функцию, возвращающую высоту дерева.
 
-\func height {A : \Type} (n : Nat) (t : Tree A n) : Fin (suc n) => {?}
+\func fmax {n : Nat} (a b : Fin n) : Fin n \elim n, a, b
+    | suc n, a, fzero => a
+    | suc n, fzero, b => b
+    | suc n, fsuc a, fsuc b => fsuc (fmax a b)
+
+\func test-max : fmax {3} (fsuc (fsuc fzero)) (fsuc fzero) = (fsuc (fsuc fzero)) => idp
+
+\func height {A : \Type} (n : Nat) (t : Tree A n) : Fin (suc n) \elim n, t
+    | suc n, !Leaf => fzero
+    | suc n, Node _ tree-left tree-right => fsuc (fmax (height n tree-left) (height n tree-right))
+    | _, _ => fzero
+
+\func test-height1 : height 2 tree1 = fsuc (fsuc fzero) => idp
+\func test-height2 : height 2 tree2 = fsuc fzero => idp
+\func test-height3 : height 2 tree3 = fsuc (fsuc fzero) => idp
