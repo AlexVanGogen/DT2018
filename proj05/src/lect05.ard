@@ -135,7 +135,7 @@
   | 0, vnil => idp
   | suc n, vcons x xs =>
         pmap (vcons x) (v++-assoc xs ys zs) *> -- Чтобы доказать это утверждение, мы сначала используем индукционную гипотезу.
-                                               -- После этого нам нужно доказать, что 
+                                               -- После этого нам нужно доказать, что
                                                -- vcons x (transport (Vec A) (+-assoc k m n) (xs v++ (ys v++ zs))) =
                                                -- transport (Vec A) (pmap suc (+-assoc k m n)) (vcons x (xs v++ (ys v++ zs))
                                                -- Мы обобщаем это утверждение и доказываем его не только для +-assoc k m n, а для любых e : Nat и p : k + m + n = e.
