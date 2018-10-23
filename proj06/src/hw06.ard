@@ -2,36 +2,125 @@
 
 -- 1. Определите функцию swap при помощи \cowith, swap' при помощи паттерн матчинг и swap'' при помощи \new.
 
-\func swap {A B : \Type} (p : Pair A B) : Pair B A => {?}
+\func swap {A B : \Type} (p : Pair A B) : Pair B A \cowith
+    | fst_ => p.snd_
+    | snd_ => p.fst_
 
-\func swap' (p : Pair) : Pair p.B p.A => {?}
+\func swap' {A B : \Type} (p : Pair A B) : Pair B A \elim p
+    | (A', B', f, s) => {?}
 
-\func swap'' {A B : \Type} (p : Pair A B) : Pair B A => {?}
+\func swap'' {A B : \Type} (p : Pair A B) : Pair B A => \new Pair { | A => p.B | B => p.A | fst_ => p.snd_ | snd_ => p.fst_ }
 
 -- 2. Докажите, что swap (swap p) = p.
 
-\func swap-involutive {A B : \Type} (p : Pair A B) : swap (swap p) = p => {?}
+\func swap-involutive {A B : \Type} (p : Pair A B) : swap (swap p) = p => idp
 
 -- 3. Докажите, что тип PosNat 0 пустой, а тип PosNat 1 нет.
 
 \data Empty
 
-\func zero-isNotPos (p : PosNat 0) : Empty => {?}
+\func absurd {A : \Type} (p : T false) : A
 
-\func one-isPos : PosNat 1 => {?}
+\func zero-isNotPos (p : PosNat 0) : Empty => absurd (p.p)
+
+\func one-isPos : PosNat 1 => \new PosNat { | n => 1 | p => tt }
 
 -- 4. Определите \record, состоящий из пар взаимно простых натуральных чисел.
 --    Определите тип, состоящий из натуральных чисел, взаимно простых с 60.
+
+{- Helper functions -}
+\func \infixl 6 - (x y : Nat) : Nat
+  | 0, _ => 0
+  | suc x, 0 => suc x
+  | suc x, suc y => x - y
+
+\func \infix 4 < (x y : Nat) : Bool
+  | 0, 0 => false
+  | 0, suc y => true
+  | suc x, 0 => false
+  | suc x, suc y => x < y
+
+\func if {A : \Type} (x : Bool) (t e : A) : A \elim x
+  | true => t
+  | false => e
+
+\func div (x y : Nat) => div' x x y
+  \where
+    \func div' (s x y : Nat) : Nat \elim s
+        | 0 => 0
+        | suc s => if (x < y) 0 (suc (div' s (x - y) y))
+
+\func mod (x y : Nat) : Nat => x - (div x y) * y
+
+\func gcd (x y : Nat) : Nat => gcd' (x Nat.+ y) x y
+    \where
+        \func gcd' (s x y : Nat) : Nat \elim s
+            | 0 => 0
+            | suc s => if (y < 1) x (gcd' s y (mod x y))
+
+\func is1 (n : Nat) : Bool
+    | 1 => true
+    | _ => false
+
+{- Solution -}
+\record CoprimeNumberPair
+    | fst : Nat
+    | snd : Nat
+    | check-prime : T (is1 (gcd fst snd))
+
+\func coprime-with-60 (n : Nat) (p : T (is1 (gcd n 60))) => \new CoprimeNumberPair { | fst => n | snd => 60 | check-prime => p }
 
 -- 5. Определите класс монад, который наследует класс функторов. Определите \instance этого класса для Maybe.
 
 \data Maybe (A : \Type) | nothing | just A
 
--- Это задание можно проигнорировать. Я его добавил на следующий год.
--- 6. Определите инстансы монады для State и State'.
+\func maybe-fmap {A B : \Type} (f : A -> B) (m : Maybe A) : Maybe B \elim m
+    | just a => just (f a)
+    | _ => nothing
 
-\record State (S A : \Type)
-  | state : S -> \Sigma S A
+\func maybe-fmap-idp {A : \Type} (y : Maybe A) : maybe-fmap (\lam (x : A) => x) y = y \elim y
+    | just _ => idp
+    | nothing => idp
 
-\data State' (S A : \Type)
-  | state' (S -> \Sigma S A)
+\func maybe-fmap-comp {A B C : \Type} (f : A -> B) (g : B -> C) (y : Maybe A) : maybe-fmap (\lam x => g (f x)) y = maybe-fmap g (maybe-fmap f y) \elim y
+    | just _ => idp
+    | nothing => idp
+
+\func \infixl 1 maybe->>= {A B : \Type} (m : Maybe A) (f : A -> Maybe B) : Maybe B \elim m
+    | just a => f a
+    | _ => nothing
+
+\func maybe-return {A : \Type} (a : A) : Maybe A => just a
+
+\func maybe->>=-leftId {A B : \Type} (a : A) (m : A -> Maybe B) : (maybe-return a maybe->>= m) = m a => idp
+
+\func maybe->>=-rightId {A : \Type} (m : Maybe A) : (m maybe->>= maybe-return) = m \elim m
+    | just _ => idp
+    | nothing => idp
+
+\func maybe->>=-assoc {A B C : \Type} (m : Maybe A) (f : A -> Maybe B) (g : B -> Maybe C)
+    : ((m maybe->>= f) maybe->>= g) = (m maybe->>= (\lam x => f x maybe->>= g)) \elim m
+    | just _ => idp
+    | nothing => idp
+
+\class Monad \extends Functor
+    | \infixl 1 >>= {A B : \Type} (m : F A) (f : A -> F B) : F B
+    | return {A : \Type} (a : A) : F A
+    | >>=-leftId {A B : \Type} (a : A) (f : A -> F B) : (return a >>= f) = f a
+    | >>=-rightId {A : \Type} (m : F A) : (m >>= return) = m
+    | >>=-assoc {A B C : \Type} (m : F A) (f : A -> F B) (g : B -> F C) : ((m >>= f) >>= g) = (m >>= (\lam x => f x >>= g))
+
+\instance MaybeMonad : Monad Maybe
+    | fmap => maybe-fmap
+    | fmap-id => maybe-fmap-idp
+    | fmap-comp => maybe-fmap-comp
+    | >>= => maybe->>=
+    | return => maybe-return
+    | >>=-leftId => maybe->>=-leftId
+    | >>=-rightId => maybe->>=-rightId
+    | >>=-assoc => maybe->>=-assoc
+
+-- 6. Для списков есть два разных инстанса класса Monad.
+--    Определите синоним для этого класса и определите эти два инстанса.
+
+--\data List (A : \Type) | nil | cons A (List A)
