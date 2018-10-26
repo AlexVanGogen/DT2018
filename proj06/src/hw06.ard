@@ -6,7 +6,7 @@
     | fst_ => p.snd_
     | snd_ => p.fst_
 
-\func swap' {A B : \Type} (p : Pair A B) : Pair B A \elim p
+\func swap' (p : Pair) : Pair p.B p.A \elim p
     | (A', B', f, s) => {?}
 
 \func swap'' {A B : \Type} (p : Pair A B) : Pair B A => \new Pair { | A => p.B | B => p.A | fst_ => p.snd_ | snd_ => p.fst_ }
@@ -68,6 +68,7 @@
     | snd : Nat
     | check-prime : T (is1 (gcd fst snd))
 
+-- Нужно определить тип чисел, взаимно простых с 60, а эта функция не возвращает тип, но делает что-то бесполезное.
 \func coprime-with-60 (n : Nat) (p : T (is1 (gcd n 60))) => \new CoprimeNumberPair { | fst => n | snd => 60 | check-prime => p }
 
 -- 5. Определите класс монад, который наследует класс функторов. Определите \instance этого класса для Maybe.
@@ -109,6 +110,7 @@
     | >>=-leftId {A B : \Type} (a : A) (f : A -> F B) : (return a >>= f) = f a
     | >>=-rightId {A : \Type} (m : F A) : (m >>= return) = m
     | >>=-assoc {A B C : \Type} (m : F A) (f : A -> F B) (g : B -> F C) : ((m >>= f) >>= g) = (m >>= (\lam x => f x >>= g))
+    -- fmap, fmap-id и fmap-comp можно здесь реализовать.
 
 \instance MaybeMonad : Monad Maybe
     | fmap => maybe-fmap
