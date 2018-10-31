@@ -156,8 +156,6 @@
 -- 6. Определите view, представляющий число в виде частного и остатка от деления его на произвольное (неотрицательное) число m.
 --    Реализуйте функцию деления.
 
-{- TODO
-
 \func *-0-isnull (m : Nat) : 0 * m = 0 \elim m
     | 0 => idp
     | suc m => *-0-isnull m
@@ -197,8 +195,12 @@
     | 0 => pmap (\lam x => q * x) (sym p) *> sym (pmap (\lam x => suc q * x) (sym p))
     | suc r => sym (rdistr m q 1 *> pmap (\lam x => q * m + x) (*-1-neutral m *> sym p))
 
+\func lemma_6_2' (m : Nat) (t : T (0 < suc m)) (p : 1 = suc m -> Empty) : T (1 < suc m) \elim m
+    | 0 => absurd (p idp)
+    | suc m => t
+
 \func lemma_6_2 (r m : Nat) (t : T (r < m)) (p : suc r = m -> Empty) : T (suc r < m) \elim r, m
-    | 0, suc m => {?}
+    | 0, suc m => lemma_6_2' m t p
     | suc r, suc m => lemma_6_2 r m t (\lam p' => p (pmap suc p'))
     | 0, 0 => t
     | suc r, 0 => t
@@ -214,12 +216,12 @@
 
 \func div (n m : Nat) (t : T (0 < m)) : Nat => \case mod-view m n t \with { | quot-rem q _ _ _ => q }
 
-\func divTest1 : div 100 5 tt = 20 => idp
-\func divTest2 : div 100 3 tt = 33 => idp
-\func divTest3 : div 100 1 tt = 100 => idp
-\func divTest4 : div 100 0 tt = 100 => idp
+\func divTest1 : div 10 1 tt = 10 => idp
+\func divTest2 : div 10 2 tt = 5 => idp
+\func divTest3 : div 10 3 tt = 3 => idp
+\func divTest4 : div 10 11 tt = 0 => idp
+\func divTest5 : div 200 40 tt = 5 => idp
 
--}
 
 -- 7. Докажите, что функции FromBoolToDec и FromDecToBool взаимно обратны.
 
