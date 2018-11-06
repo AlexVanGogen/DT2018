@@ -1,0 +1,103 @@
+\import lect08
+\open Nat
+
+\func idp {A : \Type} {a : A} => path (\lam _ => a)
+
+\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a)
+  => coe (\lam i => B (p @ i)) b right
+
+\func \infixr 5 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a''
+  => transport (\lam x => a = x) q p
+
+\data Bool | true | false
+
+\func absurd {A : \Type} (e : Empty) : A
+
+\data Decide (A : \Type)
+  | yes A
+  | no (A -> Empty)
+
+-- DecPred P верно в тогда и только тогда, когда P разрешим.
+\func DecPred {A : \Type} (P : A -> \Type) => \Pi (a : A) -> Decide (P a)
+
+-- Например, предикат \lam n => n = 0 разрешим.
+\func decide0 : DecPred (\lam (n : Nat) => n = 0) => \lam n =>
+  \case n \as x \return Decide (x = 0) \with {
+    | 0 => yes idp
+    | suc _ => no suc/=0
+  }
+
+-- 8. Разрешимое равенство.
+
+\func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') => path (\lam i => f (p @ i))
+
+\func suc/=0 {n : Nat} (p : suc n = 0) : Empty => transport (\lam n => \case n \with { | 0 => Empty | suc _ => Unit }) p unit
+
+\func sym {A : \Type} {a a' : A} (p : a = a') => transport (\lam x => x = a) p idp
+
+\func DecEq (A : \Type) => \Pi (a a' : A) -> Decide (a = a')
+
+\class Eq (A : \Type) {
+  | decideEq : DecEq A
+  \func \infix 4 == (a a' : A) : Bool => \case decideEq a a' \with {
+    | yes _ => true
+    | no _ => false
+  }
+} \where {
+  \func \infix 4 ==' {e : Eq} (a a' : e.A) : Bool => \case e.decideEq a a' \with {
+    | yes _ => true
+    | no _ => false
+  }
+}
+
+\open Eq(==)
+
+\func pred (n : Nat) : Nat
+  | 0 => 0
+  | suc n => n
+
+\instance NatEq : Eq Nat
+  | decideEq => decideEq
+  \where
+    \func decideEq (x y : Nat) : Decide (x = y)
+      | 0, 0 => yes idp
+      | 0, suc y => no (\lam p => suc/=0 (sym p))
+      | suc x, 0 => no suc/=0
+      | suc x, suc y => \case decideEq x y \with {
+        | yes p => yes (pmap suc p)
+        | no c => no (\lam p => c (pmap pred p))
+      }
+
+\data Fin (n : Nat) \with
+  | suc n => { fzero | fsuc (Fin n) }
+
+\func absurd-Fin {A : \Type} (x : Fin 0) : A
+
+\func toFin (n : Nat) : Fin (suc n)
+    | 0 => fzero
+    | suc n => fsuc (toFin n)
+
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => absurd-Fin (transport Fin (sym p) (toFin x))
+
+\data T (b : Bool) \with
+  | true => tt
+
+\func T-absurd {A : \Type} (t : T false) : A
+
+\func suc-expand {n m : Nat} : suc (n + m) = suc n + m \elim m
+    | 0 => idp
+    | suc m => pmap suc suc-expand
+
+\func zero-left-id {n : Nat} : 0 + n = n \elim n
+    | 0 => idp
+    | suc n => pmap suc zero-left-id
+
+\func +-assoc (n m k : Nat) : (n + m) + k = n + (m + k) \elim k
+  | 0 => idp
+  | suc k => pmap suc (+-assoc n m k)
+
+\func +-comm (n m : Nat) : n + m = m + n
+  | 0, 0 => idp
+  | 0, suc m => pmap suc (+-comm 0 m)
+  | suc n, 0 => pmap suc (+-comm n 0)
+  | suc n, suc m => pmap suc (+-comm (suc n) m *> pmap suc (sym (+-comm n m)) *> +-comm n (suc m))
