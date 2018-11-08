@@ -11,6 +11,7 @@
 
 \func id' {A : \Type} (a : A) => a
 
+-- Нужно у id' указать не неявный аргумент, а уровень, так же как у Functor и Maybe.
 \func idTest1 : \Pi (A : \Type \lp) -> A -> A => id' {\Pi (A : \Type \lp) -> A -> A} (id' {\Pi (A : \Type \lp) -> A -> A} id)
 \func idTest2 : \Type \lp -> \Type \lp => id' {\Type \lp -> \Type \lp} (Maybe \lp)
 \func idTest3 : \Type (\suc \lp) => id' {\Type (\suc \lp)} (Functor \lp)
