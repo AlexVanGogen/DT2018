@@ -12,11 +12,11 @@
 \func id' {A : \Type} (a : A) => a
 
 -- Нужно у id' указать не неявный аргумент, а уровень, так же как у Functor и Maybe.
-\func idTest1 : \Pi (A : \Type \lp) -> A -> A => id' {\Pi (A : \Type \lp) -> A -> A} (id' {\Pi (A : \Type \lp) -> A -> A} id)
-\func idTest2 : \Type \lp -> \Type \lp => id' {\Type \lp -> \Type \lp} (Maybe \lp)
-\func idTest3 : \Type (\suc \lp) => id' {\Type (\suc \lp)} (Functor \lp)
-\func idTest4 : \Type (\suc \lp) => id' {\Type (\suc \lp)} (Functor \lp (Maybe \lp))
-\func idTest5 (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) : \Type \lp => id' {\Type \lp} (Functor \lp (Maybe \lp) f)
+\func idTest1 : \Pi (A : \Type \lp) -> A -> A => id' (\suc \lp) (id' (\suc \lp) id)
+\func idTest2 : \Type \lp -> \Type \lp => id' (\suc \lp) (Maybe \lp)
+\func idTest3 : \Type (\suc \lp) => id' (\suc (\suc \lp)) (Functor \lp)
+\func idTest4 : \Type (\suc \lp) => id' (\suc (\suc \lp)) (Functor \lp (Maybe \lp))
+\func idTest5 (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) : \Type \lp => id' (\suc \lp) (Functor \lp (Maybe \lp) f)
 
 -- 2. Определите предикат принадлежности элемента списку.
 

@@ -1,8 +1,21 @@
 \import lect09
+\import helpers \hiding (Bool, T, false, true, idp, transport, tt)
+\open Nat(+, *)
 
 -- 1. Определите факториал через Nat-rec.
 
+\func fact (n : Nat) : Nat => Nat-rec 1 (\lam m n => suc m * n) n
+
+\func fact-test : fact 3 = 6 => idp
+\func fact-test2 : fact 7 = 5040 => idp
+
 -- 2. Докажите ассоциативность сложения для натуральных чисел через Nat-elim.
+--\func +-nat-assoc-elim (n m k : Nat) : n + (m + k) = (n + m) + k \elim k
+--    | 0 => idp
+--    | suc k => pmap suc (+-nat-assoc-elim n m k)
+
+\func +-nat-assoc (n m k : Nat) : n + (m + k) = (n + m) + k =>
+    Nat-elim (\lam k' => n + (m + k') = (n + m) + k') idp (\lam _ => pmap suc) k
 
 -- 3. Определите через Nat-<-ind либо div, либо toDivDom.
 
@@ -12,7 +25,35 @@
 
 -- 4. Определите элиминатор для D.
 
+\func D-elim {E : D -> \Type}
+    (c1 : \Pi (n : Nat) -> E (con1 n))
+    (c2 : \Pi (d1 : D) -> E d1 -> \Pi (d2 : D) -> E d2 -> E (con2 d1 d2))
+    (c3 : \Pi (f : Nat -> D) -> (\Pi (n : Nat) -> E (f n)) -> E (con3 f)) (d : D) : E d \elim d
+    | con1 n => c1 n
+    | con2 d1 d2 => c2 d1 (D-elim {E} c1 c2 c3 d1) d2 (D-elim {E} c1 c2 c3 d2)
+    | con3 f => c3 f (\lam n => D-elim {E} c1 c2 c3 (f n))
+
 -- 5. Определите рекурсор и элиминатор для List.
+-- \data List (A : \Type) | nil | cons A (List A)
+-- \data Nat | zero | suc Nat
+
+\func List-rec {A : \Type} {E : \Type} (n : E) (c : A -> List A -> E -> E) (xs : List A) : E \elim xs
+    | nil => n
+    | cons x xs => c x xs (List-rec n c xs)
+
+\func map-rec {A B : \Type} (f : A -> B) (xs : List A) : List B => List-rec nil (\lam x _ ys => cons (f x) ys) xs
+\func map-test : map-rec (\lam x => 2 * x) (cons 1 (cons 2 (cons 3 nil))) = cons 2 (cons 4 (cons 6 nil)) => idp
+
+\func List-elim {A : \Type}
+    (E : List A -> \Type)
+    (n : E nil)
+    (c : \Pi (x : A) -> \Pi (xs : List A) -> E xs -> E (cons x xs))
+    (xs : List A) : E xs \elim xs
+    | nil => n
+    | cons x xs => c x xs (List-elim {A} E n c xs)
+
+\func ++-assoc {A : \Type} (xs ys zs : List A) : xs ++ (ys ++ zs) = (xs ++ ys) ++ zs =>
+    List-elim (\lam xs' => xs' ++ (ys ++ zs) = (xs' ++ ys) ++ zs) idp (\lam x _ => pmap (cons x)) xs
 
 -- 6. Докажите принцип индукции для натуральных чисел, позволяющий использовать индукционную гипотезу для любого меньшего числа.
 --    Hint: Прежде, чем доказывать утверждение по индукции, его можно обобщить.
