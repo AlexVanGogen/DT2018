@@ -1,0 +1,26 @@
+\import lect11
+\open Nat(+)
+
+\func \infixr 5 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a''
+  => transport (\lam x => a = x) q p
+
+\func sym {A : \Type} {a a' : A} (p : a = a') => transport (\lam x => x = a) p idp
+
+\data Fin (n : Nat) \with
+  | suc n => { fzero | fsuc (Fin n) }
+
+\func absurd-Fin {A : \Type} (x : Fin 0) : A
+
+\func toFin (n : Nat) : Fin (suc n)
+    | 0 => fzero
+    | suc n => fsuc (toFin n)
+
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => absurd-Fin (transport Fin (sym p) (toFin x))
+
+\func prev (n : Nat) : Nat
+    | 0 => 0
+    | suc n => n
+
+\func n/=sucn {n : Nat} (p : n = suc n) : Empty \elim n
+    | 0 => zero/=suc 0 p
+    | suc n => n/=sucn {n} (pmap prev p)
