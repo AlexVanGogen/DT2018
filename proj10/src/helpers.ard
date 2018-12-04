@@ -1,0 +1,98 @@
+\import lect10
+\open Nat
+
+\func idp {A : \Type} {a : A} => path (\lam _ => a)
+
+\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a)
+  => coe (\lam i => B (p @ i)) b right
+
+\func \infixr 5 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a''
+  => transport (\lam x => a = x) q p
+
+\data Bool | true | false
+
+\func if {A : \Type} (b : Bool) (then else : A) : A \elim b
+    | true => then
+    | false => else
+
+\func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') => path (\lam i => f (p @ i))
+
+\func sym {A : \Type} {a a' : A} (p : a = a') => transport (\lam x => x = a) p idp
+
+\func pred (n : Nat) : Nat
+  | 0 => 0
+  | suc n => n
+
+\data Fin (n : Nat) \with
+  | suc n => { fzero | fsuc (Fin n) }
+
+\func absurd-Fin {A : \Type} (x : Fin 0) : A
+
+\func toFin (n : Nat) : Fin (suc n)
+    | 0 => fzero
+    | suc n => fsuc (toFin n)
+
+\data T (b : Bool) \with
+  | true => tt
+
+\func T-absurd {A : \Type} (t : T false) : A
+
+\func suc-expand {n m : Nat} : suc (n + m) = suc n + m \elim m
+    | 0 => idp
+    | suc m => pmap suc suc-expand
+
+\func zero-left-id {n : Nat} : 0 + n = n \elim n
+    | 0 => idp
+    | suc n => pmap suc zero-left-id
+
+\func +-assoc (n m k : Nat) : (n + m) + k = n + (m + k) \elim k
+  | 0 => idp
+  | suc k => pmap suc (+-assoc n m k)
+
+\func +-comm (n m : Nat) : n + m = m + n
+  | 0, 0 => idp
+  | 0, suc m => pmap suc (+-comm 0 m)
+  | suc n, 0 => pmap suc (+-comm n 0)
+  | suc n, suc m => pmap suc (+-comm (suc n) m *> pmap suc (sym (+-comm n m)) *> +-comm n (suc m))
+
+\data Empty
+
+\func length {A : \Type} (xs : List A) : Nat \elim xs
+    | nil => 0
+    | cons _ xs => suc (length xs)
+
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => absurd-Fin (transport Fin (sym p) (toFin x))
+
+\func nil/=cons {A : \Type} (x : A) (xs : List A) (p : nil = cons x xs) : Empty =>
+    \let l => length xs \in zero/=suc l (pmap length p)
+
+\func \infixl 4 ++ {A : \Type} (xs ys : List A) : List A \elim xs
+  | nil => ys
+  | cons x xs => cons x (xs ++ ys)
+
+\func pow2 (n : Nat) : Nat \elim n
+    | 0 => 1
+    | suc n => 2 * pow2 n
+
+\data Maybe (A : \Type) | nothing | just A
+
+\func absurd {A : \Type} (e : Empty) : A
+
+\data Unit | unit
+
+\func \infix 4 <== (x y : Nat) : \Type
+  | 0, _ => Unit
+  | suc _, 0 => Empty
+  | suc x, suc y => x <== y
+
+\data LessOrEq (n m : Nat) \with
+  | 0, m => z<=n
+  | suc n, suc m => s<=s (LessOrEq n m)
+
+\func reverse {A : \Type} (l : List A) : List A
+    | nil => nil
+    | cons y ys => (reverse ys) ++ (cons y nil)
+
+\func vec (A : \Type) (n : Nat) : \Type \elim n
+  | 0 => \Sigma
+  | suc n => \Sigma A (vec A n)
