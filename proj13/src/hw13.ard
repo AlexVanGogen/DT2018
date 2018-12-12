@@ -1,14 +1,47 @@
 \import lect13
+\import helpers
 
 -- 1. Определите функцию negPred : Int -> Int такую, что negPred x = x, если x > 0, и negPred x = x - 1, если x <= 0.
 
-\func negPred (x : Int) : Int => {?}
+\func negPred (x : Int) : Int
+  | pos 0 => neg 1
+  | pos n => pos n
+  | neg n => neg (suc n)
+
+\func negPred-test1 : negPred (pos 5) = pos 5 => idp
+\func negPred-test2 : negPred (pos 0) = neg 1 => idp
+\func negPred-test3 : negPred (neg 0) = neg 1 => idp
+\func negPred-test4 : negPred (neg 5) = neg 6 => idp
 
 -- 2. Определите функции сложения и умножения для Int.
 
-\func \infixl 6 + (x y : Int) : Int => {?}
+\func \infixl 6 + (x y : Int) : Int
+  | pos x, pos 0 => pos x
+  | pos 0, pos (suc y) => pos (suc y)
+  | pos (suc x), pos (suc y) => pos (suc x Nat.+ suc y)
+  | neg (suc x), neg (suc y) => neg (suc x Nat.+ suc y)
+  | pos 0, neg (suc y) => neg (suc y)
+  | pos (suc x), neg (suc y) => pos x + neg y
+  | neg (suc x), pos 0 => neg (suc x)
+  | neg (suc x), pos (suc y) => neg x + pos y
 
-\func \infixl 7 * (x y : Int) : Int => {?}
+\func +-test1 : pos 5 + pos 6 = pos 11 => idp
+\func +-test2 : pos 5 + neg 4 = pos 1 => idp
+\func +-test3 : pos 5 + neg 5 = pos 0 => idp
+\func +-test4 : pos 5 + neg 6 = neg 1 => idp
+\func +-test5 : neg 5 + pos 6 = pos 1 => idp
+
+\func \infixl 7 * (x y : Int) : Int
+  | pos x, pos y => pos (x Nat.* y)
+  | pos x, neg y => neg (x Nat.* y)
+  | neg (suc x), pos y => neg (suc x Nat.* y)
+  | neg (suc x), neg (suc y) => pos (suc x Nat.* suc y)
+
+\func *-test1 : pos 5 * pos 6 = pos 30 => idp
+\func *-test2 : pos 5 * neg 4 = neg 20 => idp
+\func *-test3 : pos 5 * neg 5 = neg 25 => idp
+\func *-test4 : pos 5 * neg 6 = neg 30 => idp
+\func *-test5 : neg 10 * neg 10 = pos 100 => idp
 
 -- 3. Определите тип данных BinNat для бинарных натуральных чисел.
 --    У него должно быть три конструктора: для 0, для чисел вида 2*n и чисел вида 2*n+1.
@@ -16,16 +49,34 @@
 --    Используйте типы данных с условиями, чтобы вычислительно отождествить различные нули.
 
 \data BinNat
+  | bzero
+  | beven (k : Nat) \elim k {
+    | 0 => bzero
+  }
+  | bodd (k : Nat)
 
 -- 4. Постройте функции Nat -> BinNat и BinNat -> Nat и докажите, что они взаимно обратны.
 
-\func NatToBinNat (n : Nat) : BinNat => {?}
+\func NatToBinNat (n : Nat) : BinNat
+  | 0 => bzero
+  | suc n => \case NatToBinNat n \with {
+    | bzero => bodd 0
+    | beven (suc k) => bodd k  -- n = 2 * k => suc n = 2 * k + 1
+    | bodd k => beven (suc k)  -- n = 2 * k + 1 => suc n = 2 * (k + 1)
+  }
 
-\func BinNatToNat (b : BinNat) : Nat => {?}
+\func BinNatToNat (b : BinNat) : Nat
+  | bzero => 0
+  | beven (suc k) => 2 Nat.* suc k
+  | bodd k => (2 Nat.* k) Nat.+ 1
 
-\func nbn (n : Nat) : BinNatToNat (NatToBinNat n) = n => {?}
+\func nbn (n : Nat) : BinNatToNat (NatToBinNat n) = n
+  | 0 => idp
+  | suc n => {?}
 
-\func bnb (b : BinNat) : NatToBinNat (BinNatToNat b) = b => {?}
+\func bnb (b : BinNat) : NatToBinNat (BinNatToNat b) = b
+  | bzero => idp
+  | beven (suc k) => {?}
 
 -- 5. Докажите, что функция pred сюръективна.
 
@@ -33,13 +84,11 @@
   | 0 => 0
   | suc n => n
 
-\func pred-is-sur : isSur pred => {?}
+\func pred-is-sur : isSur pred => \lam y => in (suc y, idp)
 
 -- 6. Докажите, что функция suc не сюръективна.
 
-\data Empty
-
-\func suc-is-not-sur (p : isSur suc) : Empty => {?}
+\func suc-is-not-sur (p : isSur suc) : Empty => \case p 0 \with { | in p => zero/=suc p.1 (sym p.2) }
 
 -- 7. Пусть f : A -> B и g : B -> C ─ некоторые функции.
 --    Докажите, что если f и g сюръективны, то g `o` f также сюръективна.
@@ -47,9 +96,17 @@
 
 \func \fixr 9 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam a => g (f a)
 
-\func o-sur {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur f) (q : isSur g) : isSur (g `o` f) => {?}
+\func o-sur {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur f) (q : isSur g) : isSur (g `o` f) =>
+  \lam y => \case q y \with {
+    | in qp => \case p qp.1 \with {
+      | in pp => in (pp.1, pmap g pp.2 *> qp.2)
+    }
+  }
 
-\func o-sur' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur (g `o` f)) : isSur g => {?}
+\func o-sur' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur (g `o` f)) : isSur g =>
+  \lam y => \case p y \with {
+    in pp => in (f pp.1, pp.2)
+  }
 
 -- 8. Определите множество конечных подмножеств множества A, то есть списков элементов A с точностью до перестановок и повторений элементов.
 
@@ -61,4 +118,13 @@
 
 \func \infix 1 <-> (A B : \Type) => \Sigma (A -> B) (B -> A)
 
-\func isBij=isInj+isSur {A B : \Set} (f : A -> B) : isBij f <-> (\Sigma (isInj f) (isSur f)) => {?}
+\func sur-to-f {A B : \Set} (f : A -> B) (p : isSur f) (x : B) : A => \case p x \with {
+  | in p' => p'.1
+}
+
+\func isBij=isInj+isSur {A B : \Set} (f : A -> B) : isBij f <-> (\Sigma (isInj f) (isSur f)) => (
+  \lam bij => (\lam x y fp => sym (bij.2 x) *> pmap bij.1 fp *> bij.2 y, \lam y => in (bij.1 y, bij.3 y)),
+  \lam inj-sur =>
+      \let g : B -> A => {?}
+      \in {?}
+)
