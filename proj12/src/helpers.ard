@@ -1,0 +1,38 @@
+\import lect12
+\open Nat(+)
+
+\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' =>
+  path (\lam i => f (p @ i) (q @ i))
+
+\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
+  coe (\lam i => B (p @ i)) b right
+
+\func \infixr 5 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a''
+  => transport (\lam x => a = x) q p
+
+\func sym {A : \Type} {a a' : A} (p : a = a') => transport (\lam x => x = a) p idp
+
+\data Empty
+
+\func T-absurd {A : \Type} (t : T false) : A
+
+\func absurd {A : \Type} (e : Empty) : A
+
+\data Fin (n : Nat) \with
+  | suc n => { fzero | fsuc (Fin n) }
+
+\func absurd-Fin {A : \Type} (x : Fin 0) : A
+
+\func toFin (n : Nat) : Fin (suc n)
+    | 0 => fzero
+    | suc n => fsuc (toFin n)
+
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => absurd-Fin (transport Fin (sym p) (toFin x))
+
+\func prev (n : Nat) : Nat
+    | 0 => 0
+    | suc n => n
+
+\func n/=sucn {n : Nat} (p : n = suc n) : Empty \elim n
+    | 0 => zero/=suc 0 p
+    | suc n => n/=sucn {n} (pmap prev p)
