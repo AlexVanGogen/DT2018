@@ -18,21 +18,21 @@
 
 \data NodeKeyNotLessThanLeft {A : Poset} (key : A) (left : BinarySearchTree A) : \Type \elim left
     | bstnil => bstnilL
-    | _ => bstnodeL (max left <= {A} key)
+    | bstnode a _ _ d _ => bstnodeL (max {A} a d <= key)
 
 \data NodeKeyNotGreaterThanRight {A : Poset} (key : A) (right : BinarySearchTree A) : \Type \elim right
     | bstnil => bstnilR
-    | _ => bstnodeR (key <= {A} min right)
+    | bstnode a b _ _ _ => bstnodeR (key <= {A} min a b)
 
-\func max {A : Poset} (tree : BinarySearchTree A) : Maybe A \elim tree
-    | bstnil => nothing
-    | bstnode key _ _ bstnil _ => just key
-    | bstnode _ _ _ right _ => max right
+\func max {A : Poset} (key : A) (right : BinarySearchTree A) : A \elim right
+    | bstnil => key
+    | bstnode key' _ _ bstnil _ => key'
+    | bstnode key' _ _ (bstnode a b c d e) _ => max key' (bstnode a b c d e)
 
-\func min {A : Poset} (tree : BinarySearchTree A) : Maybe A \elim tree
-    | bstnil => nothing
-    | bstnode key bstnil _ _ _ => just key
-    | bstnode _ left _ _ _ => min left
+\func min {A : Poset} (key : A) (left : BinarySearchTree A) : A \elim left
+    | bstnil => key
+    | bstnode key' bstnil _ _ _ => key'
+    | bstnode key' (bstnode a b c d e) _ _ _ => min key' (bstnode a b c d e)
 
 {- Define instance of Poset for Nat -}
 \func leq-refl (x : Nat) : LessOrEq x x \elim x
@@ -73,7 +73,7 @@
             (bstnode 0 bstnil bstnilL bstnil bstnilR)
             (bstnodeL (z<=n : LessOrEq 0 1) : NodeKeyNotLessThanLeft {NatPoset} 1 (bstnode 0 bstnil bstnilL bstnil bstnilR))
             (bstnode 2 bstnil bstnilL bstnil bstnilR)
-            (bstnodeR (s<=s (z<=n : LessOrEq 0 2)))
+            (bstnodeR (s<=s (z<=n : LessOrEq 0 1)))
 
 -- 3. Реализуйте функцию сортировки, возвращающую SortedList.
 
